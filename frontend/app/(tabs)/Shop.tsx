@@ -31,7 +31,7 @@ type Product = {
   isNew?: boolean;
 };
 
-const API_URL = 'http://192.168.100.242:8000'; // Update if using ngrok
+const API_URL = 'http://localhost:8000'; // Update if using ngrok
 
 export default function Shop() {
   const [loading, setLoading] = useState(true);
