@@ -168,6 +168,29 @@ export default function UniversalTopbar({ }: UniversalTopbarProps) {
                             <Text style={styles.loginBtnText}>Sign In</Text>
                         </TouchableOpacity>
                     )}
+                    {/* Admin Button - Desktop */}
+{!isCompact && user?.role === 'admin' && (
+    <TouchableOpacity
+        style={{
+            backgroundColor: Palette.warmCopper,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 20,
+        }}
+        onPress={() => handleNav('/admin')}
+        activeOpacity={0.8}
+    >
+        <Text
+            style={{
+                color: '#fff',
+                fontFamily: Fonts.bold,
+                fontSize: 14,
+            }}
+        >
+            Admin
+        </Text>
+    </TouchableOpacity>
+)}
                     {!isCompact && user && (
                         <TouchableOpacity
                             style={styles.profileBtn}
@@ -221,6 +244,25 @@ export default function UniversalTopbar({ }: UniversalTopbarProps) {
                             <Text style={styles.mobileLoginBtnText}>Sign In</Text>
                         </TouchableOpacity>
                     )}
+
+{/* Admin Button - Mobile */}
+{user?.role === 'admin' && (
+    <TouchableOpacity
+        style={styles.mobileItem}
+        onPress={() => handleNav('/admin')}
+    >
+        <Ionicons
+            name="shield-checkmark-outline"
+            size={22}
+            color={Palette.warmCopper}
+            style={{ marginRight: 16 }}
+        />
+        <Text style={styles.mobileItemLabelActive}>
+            Admin Dashboard
+        </Text>
+    </TouchableOpacity>
+)}
+
                     {user && (
                         <TouchableOpacity
                             style={styles.mobileProfileRow}

@@ -1,5 +1,6 @@
 from fpdf import FPDF
 from io import BytesIO
+from db import get_admin_analytics_data
 
 def generate_receipt_pdf(items, total, transaction_id):
     pdf = FPDF()
@@ -39,3 +40,23 @@ def generate_receipt_pdf(items, total, transaction_id):
     # Output as bytes
     pdf_bytes = pdf.output(dest="S").encode("latin1")
     return pdf_bytes
+
+def generate_admin_report_pdf():
+    data = get_admin_analytics_data()  # returns dict with all admin analytics
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "Gen Analytics Report", ln=True, align="C")
+
+    pdf.set_font("Arial", "", 12)
+    pdf.ln(10)
+    pdf.cell(0, 10, f"Total Users: {data['total_users']}", ln=True)
+    pdf.cell(0, 10, f"Total Scans: {data['total_scans']}", ln=True)
+    pdf.cell(0, 10, f"Durians Detected: {data['total_durians_detected']}", ln=True)
+    pdf.cell(0, 10, f"Overall Success Rate: {data['overall_success_rate']}%", ln=True)
+    pdf.cell(0, 10, f"User Growth: {data.get('user_growth_percent', 'N/A')}%", ln=True)
+    pdf.cell(0, 10, f"Weekly Growth: {data.get('weekly_growth_percent', 'N/A')}%", ln=True)
+
+    return pdf.output(dest='S').encode('latin1')  # returns PDF bytes
+

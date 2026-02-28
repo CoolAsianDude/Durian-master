@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Gen Admin Analytics Report</title>
+<style>
+    body {
+        font-family: Helvetica, Arial, sans-serif;
+        margin: 30px;
+        color: #2c3e50;
+    }
+    h1, h2, h3 {
+        margin: 0;
+        padding: 0;
+    }
+    h1 {
+        text-align: center;
+        color: #27AE60;
+        margin-bottom: 10px;
+    }
+    .subtitle {
+        text-align: center;
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 30px;
+    }
+    .section {
+        margin-bottom: 25px;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 4px;
+    }
+    .metric-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .metric-card {
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 8px;
+        flex: 1 1 45%;
+    }
+    .metric-card h3 {
+        margin: 5px 0;
+        font-size: 18px;
+        color: #333;
+    }
+    .metric-card p {
+        font-size: 12px;
+        color: #666;
+    }
+    .chart {
+        text-align: center;
+        margin-top: 10px;
+    }
+    .chart img {
+        max-width: 100%;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 6px;
+        font-size: 12px;
+        text-align: center;
+    }
+    th {
+        background-color: #27AE60;
+        color: white;
+    }
+</style>
+</head>
+<body>
+
+<h1>Gen Admin Analytics Report</h1>
+<p class="subtitle">Generated at: {{ data.generated_at }}</p>
+
+<div class="section">
+    <div class="section-title">Key Metrics</div>
+    <div class="metric-grid">
+        <div class="metric-card">
+            <h3>Total Users</h3>
+            <p>{{ data.stats.total_users }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Total Scans</h3>
+            <p>{{ data.stats.total_scans }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Durians Detected</h3>
+            <p>{{ data.stats.total_durians_detected }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Overall Success Rate</h3>
+            <p>{{ data.stats.overall_success_rate }}%</p>
+        </div>
+        <div class="metric-card">
+            <h3>User Growth</h3>
+            <p>{{ data.stats.user_growth_percent }}%</p>
+        </div>
+        <div class="metric-card">
+            <h3>Weekly Growth</h3>
+            <p>{{ data.stats.weekly_growth_percent }}%</p>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">System Health</div>
+    <p>{{ data.stats.system_health }}</p>
+</div>
+
+<div class="section">
+    <div class="section-title">Weekly Activity Chart</div>
+    {% if data.weekly_chart %}
+    <div class="chart">
+        <img src="data:image/png;base64,{{ data.weekly_chart }}" alt="Weekly Activity Chart">
+    </div>
+    {% else %}
+    <p>No weekly activity data available.</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <div class="section-title">Quality Distribution Chart</div>
+    {% if data.dist_chart %}
+    <div class="chart">
+        <img src="data:image/png;base64,{{ data.dist_chart }}" alt="Quality Distribution Chart">
+    </div>
+    {% else %}
+    <p>No quality distribution data available.</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <div class="section-title">Recent Scans Chart</div>
+    {% if data.recent_chart %}
+    <div class="chart">
+        <img src="data:image/png;base64,{{ data.recent_chart }}" alt="Recent Scan Chart">
+    </div>
+    {% else %}
+    <p>No recent scan data available.</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <div class="section-title">Recent Scan Details</div>
+    {% if data.stats.daily_scans %}
+    <table>
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Scans</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for scan in data.stats.daily_scans %}
+            <tr>
+                <td>{{ scan.day }}</td>
+                <td>{{ scan.scans }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No daily scans data available.</p>
+    {% endif %}
+</div>
+
+</body>
+</html>

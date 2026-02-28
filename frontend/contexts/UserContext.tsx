@@ -8,6 +8,7 @@ interface User {
   photoProfile: string;
   photoPublicId: string;
   role: string;
+  token: string; // <-- Added JWT token
 }
 
 interface UserContextType {
@@ -15,6 +16,7 @@ interface UserContextType {
   loading: boolean;
   refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
+  login: (userData: User) => Promise<void>; // Optional: helper to save token on login
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -29,16 +31,23 @@ export function UserProvider({ children }: UserProviderProps) {
 
   const loadUser = async () => {
     try {
-      const keys = ['user_id', 'name', 'email', 'photoProfile', 'photoPublicId', 'user_role'];
+      const keys = [
+        'jwt_token',
+        'user_id',
+        'name',
+        'email',
+        'photoProfile',
+        'photoPublicId',
+        'user_role'
+      ];
       const stores = await AsyncStorage.multiGet(keys);
-      
-      // Convert array of pairs to an object
+
       const data: any = {};
       stores.forEach(([key, value]) => {
         data[key] = value;
       });
 
-      if (data.user_id) {
+      if (data.user_id && data.jwt_token) {
         setUser({
           id: data.user_id,
           name: data.name || '',
@@ -46,6 +55,7 @@ export function UserProvider({ children }: UserProviderProps) {
           photoProfile: data.photoProfile || '',
           photoPublicId: data.photoPublicId || '',
           role: data.user_role || 'user',
+          token: data.jwt_token,
         });
       }
     } catch (error) {
@@ -55,13 +65,29 @@ export function UserProvider({ children }: UserProviderProps) {
     }
   };
 
+  const login = async (userData: User) => {
+    try {
+      await AsyncStorage.multiSet([
+        ['jwt_token', userData.token],
+        ['user_id', userData.id],
+        ['name', userData.name],
+        ['email', userData.email],
+        ['photoProfile', userData.photoProfile],
+        ['photoPublicId', userData.photoPublicId],
+        ['user_role', userData.role],
+      ]);
+      setUser(userData);
+    } catch (error) {
+      console.error('Error saving user data:', error);
+    }
+  };
+
   const refreshUser = async () => {
     setLoading(true);
     await loadUser();
   };
 
   const logout = async () => {
-    console.log('[UserContext] Logging out...');
     try {
       await AsyncStorage.multiRemove([
         'jwt_token',
@@ -73,9 +99,8 @@ export function UserProvider({ children }: UserProviderProps) {
         'user_role'
       ]);
       setUser(null);
-      console.log('[UserContext] Logout complete, state reset.');
     } catch (error) {
-      console.error('[UserContext] Logout error:', error);
+      console.error('Logout error:', error);
     }
   };
 
@@ -90,6 +115,7 @@ export function UserProvider({ children }: UserProviderProps) {
         loading,
         refreshUser,
         logout,
+        login,
       }}
     >
       {children}
@@ -104,4 +130,3 @@ export function useUser() {
   }
   return context;
 }
-

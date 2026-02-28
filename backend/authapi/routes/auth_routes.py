@@ -1,12 +1,11 @@
 from flask import Blueprint, request, jsonify
-from auth import signup_user, login_user, hash_password, signup_user_with_pfp
+from auth import signup_user, login_user, hash_password, signup_user_with_pfp, get_current_admin
 from db import users_collection, upload_user_pfp
 from bson.objectid import ObjectId
 import tempfile
 import os
 import traceback
 
-# Create Blueprint
 auth_bp = Blueprint('auth', __name__)
 
 # ---------------------------
@@ -15,116 +14,111 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route("/signup", methods=["POST", "OPTIONS"])
 def signup():
-    """User registration (JSON)"""
     if request.method == "OPTIONS":
         return '', 200
-        
-    data = request.json
-    if not data:
-        return jsonify({"error": "No data"}), 400
-        
-    required_fields = ["name", "email", "password", "confirm_password"]
-    if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing fields"}), 400
-    
-    result = signup_user(
-        name=data["name"],
-        email=data["email"],
-        password=data["password"],
-        confirm_password=data["confirm_password"]
-    )
-    status_code = 200 if "success" in result else 400
-    return jsonify(result), status_code
 
-@auth_bp.route("/signup-with-pfp", methods=["POST", "OPTIONS"])
-def signup_with_pfp():
-    """User registration with profile picture (multipart/form-data)"""
-    if request.method == "OPTIONS":
-        return '', 200
-        
     try:
-        print("[ROUTE] /signup-with-pfp called")
-        print(f"[ROUTE] Content-Type: {request.content_type}")
-        print(f"[ROUTE] Form keys: {list(request.form.keys())}")
-        print(f"[ROUTE] File keys: {list(request.files.keys())}")
-        
-        # Debug: print all files in request
-        for key in request.files:
-            file = request.files[key]
-            print(f"[ROUTE] File '{key}': {file.filename}, size: {file.content_length}")
-        
-        # Get form data
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        print(f"[ROUTE] Form data - name: {name}, email: {email}")
-        
-        if not all([name, email, password, confirm_password]):
-            print(f"[ROUTE] Missing required fields")
-            return jsonify({"error": "Missing required fields"}), 400
-        
-        # Get photo file
-        photo_file = request.files.get('photo')
-        print(f"[ROUTE] Photo file: {photo_file}")
-        if photo_file:
-            print(f"[ROUTE] Photo filename: {photo_file.filename}")
-        
-        result = signup_user_with_pfp(
-            name=name,
-            email=email,
-            password=password,
-            confirm_password=confirm_password,
-            photo_file=photo_file
-        )
-        
-        print(f"[ROUTE] Signup result: {result}")
-        status_code = 200 if "success" in result else 400
-        return jsonify(result), status_code
-        
+        # If request is multipart/form-data (PFP upload)
+        if request.content_type.startswith("multipart/form-data"):
+            name = request.form.get("name")
+            email = request.form.get("email")
+            password = request.form.get("password")
+            confirm_password = request.form.get("confirmPassword")
+            photo_file = request.files.get("photo")
+            result = signup_user_with_pfp(name, email, password, confirm_password, photo_file)
+            return jsonify(result), 200 if result.get("success") else 400
+        else:
+            data = request.json
+            if not data:
+                return jsonify({"error": "No data provided"}), 400
+
+            name = data.get("name")
+            email = data.get("email")
+            password = data.get("password")
+            confirm_password = data.get("confirmPassword")
+            result = signup_user(name, email, password, confirm_password)
+            return jsonify(result), 200 if result.get("success") else 400
+
     except Exception as e:
-        print(f"[ROUTE] Signup error: {str(e)}")
-        print(f"[ROUTE] Traceback: {traceback.format_exc()}")
-        return jsonify({"error": "Registration failed"}), 500
+        print("Signup error:", str(e))
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
 
 @auth_bp.route("/login", methods=["POST", "OPTIONS"])
 def login():
-    """User login"""
     if request.method == "OPTIONS":
         return '', 200
-        
-    data = request.json
-    required_fields = ["email", "password"]
-    if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing fields"}), 400
-    
-    result = login_user(
-        email=data["email"],
-        password=data["password"]
-    )
-    status_code = 200 if "success" in result else 401
-    return jsonify(result), status_code
 
-@auth_bp.route("/debug/signup", methods=["POST"])
-def debug_signup():
-    """Debug endpoint to test signup"""
-    print("=== DEBUG SIGNUP REQUEST ===")
-    print("Headers:", dict(request.headers))
-    print("Content-Type:", request.content_type)
-    
-    if request.is_json:
-        print("JSON data:", request.json)
-    else:
-        print("Form data:", request.form.to_dict())
-        print("Files:", request.files)
-    
-    return jsonify({
-        "debug": True,
-        "method": request.method,
-        "content_type": request.content_type,
-        "has_json": request.is_json,
-        "has_files": bool(request.files),
-        "form_data": request.form.to_dict() if request.form else {},
-        "file_names": list(request.files.keys()) if request.files else []
-    })
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        email = data.get("email")
+        password = data.get("password")
+
+        result = login_user(email, password)
+        return jsonify(result), 200 if result.get("success") else 401
+
+    except Exception as e:
+        print("Login error:", str(e))
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@auth_bp.route("/logout", methods=["POST", "OPTIONS"])
+def logout():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    try:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"error": "Missing Authorization header"}), 401
+
+        token = auth_header.split(" ")[1]
+        from jose import jwt
+        from auth import JWT_SECRET, JWT_ALGORITHM
+
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("sub")
+
+        users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"isLoggedIn": False}}
+        )
+        return jsonify({"success": True, "message": "Logged out"}), 200
+
+    except Exception as e:
+        print("Logout error:", str(e))
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@auth_bp.route("/me", methods=["GET", "OPTIONS"])
+def get_current_user():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    try:
+        from flask import g
+        user = get_current_admin() or None
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        user_data = {
+            "id": str(user["_id"]),
+            "name": user["name"],
+            "email": user["email"],
+            "role": user.get("role", "user"),
+            "photoProfile": user.get("photoProfile", "https://via.placeholder.com/120"),
+            "photoThumbnail": user.get("photoThumbnail", "https://via.placeholder.com/120"),
+            "photoPublicId": user.get("photoPublicId", "")
+        }
+        return jsonify({"success": True, "user": user_data}), 200
+
+    except Exception as e:
+        print("Get current user error:", str(e))
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
